@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <title>JSON Tools — Beautify / Minify / Validate</title>
+  <style>
+    :root{
+      --bg:#0b0f1a; --card:#111a2e; --text:#e8eefc; --muted:#a8b3d6;
+      --border:#223055; --accent:#7aa7ff; --bad:#ff6b6b; --ok:#39d98a;
+      --btn:#182447; --btn2:#1f2d57;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial,sans-serif;
+    }
+    [data-theme="light"]{
+      --bg:#f6f7fb; --card:#ffffff; --text:#111827; --muted:#4b5563;
+      --border:#e5e7eb; --accent:#2563eb; --bad:#dc2626; --ok:#16a34a;
+      --btn:#f3f4f6; --btn2:#e5e7eb;
+      --shadow: 0 10px 30px rgba(17,24,39,.10);
+    }
+    body{ margin:0; font-family:var(--sans); background:var(--bg); color:var(--text); }
+    .wrap{ max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
+    header{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .title{ display:flex; flex-direction:column; gap:4px; }
+    h1{ margin:0; font-size:20px; letter-spacing:.2px; }
+    .sub{ color:var(--muted); font-size:13px; }
+    .controls{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--border);
+      background:var(--btn);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      box-shadow:none;
+      font-weight:600;
+      font-size:13px;
+    }
+    button:hover{ background:var(--btn2); }
+    button.primary{ border-color:transparent; background:var(--accent); color:white; }
+    button.primary:hover{ filter:brightness(.95); }
+    button.danger{ border-color:transparent; background:var(--bad); color:white; }
+    button.ghost{ background:transparent; }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+      margin-top:16px;
+    }
+    @media(min-width:900px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height: 420px;
+    }
+    .card-head{
+      padding:12px 14px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .card-head .label{ font-weight:700; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .stats{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .dot{ width:8px; height:8px; border-radius:999px; display:inline-block; margin-right:6px; }
+    .ok{ background:var(--ok); }
+    .bad{ background:var(--bad); }
+    textarea{
+      flex:1;
+      width:100%;
+      resize:none;
+      border:0;
+      outline:none;
+      padding:14px;
+      background:transparent;
+      color:var(--text);
+      font-family:var(--mono);
+      font-size:13px;
+      line-height:1.45;
+    }
+    .bar{
+      padding:12px 14px;
+      border-top:1px solid var(--border);
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .bar .left, .bar .right{ display:flex; gap:8px; flex-wrap:wrap; }
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(17,24,39,.92);
+      color: white;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 12px 30px rgba(0,0,0,.4);
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+      max-width: calc(100vw - 30px);
+      text-align: center;
+      z-index: 9999;
+    }
+    .toast.show{ opacity:1; }
+    footer{ margin-top:16px; color:var(--muted); font-size:12px; }
+    a{ color:var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    code.kbd{
+      font-family:var(--mono);
+      font-size: 12px;
+      padding: 2px 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(127,127,127,.08);
+    }
+  </style>
+
+  <!-- PWA: минимальные мета/манифест создадим в JS, чтобы был 1 файл -->
+</head>
+
+<body>
+  <div class="wrap" id="app">
+    <header>
+      <div class="title">
+        <h1>JSON Tools</h1>
+        <div class="sub">Beautify • Minify • Validate • Copy • Download • PWA</div>
+      </div>
+      <div class="controls">
+        <button class="ghost" id="themeBtn" title="Сменить тему">🌗 Theme</button>
+        <button class="ghost" id="installBtn" style="display:none" title="Установить как приложение">⬇️ Install</button>
+        <button class="ghost" id="clearAllBtn" title="Очистить всё">🧹 Clear</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <div class="card-head">
+          <div class="label">Input JSON</div>
+          <div class="stats" id="inStats">—</div>
+        </div>
+        <textarea id="input" spellcheck="false" placeholder='Вставь JSON сюда…'></textarea>
+        <div class="bar">
+          <div class="left">
+            <button class="primary" id="beautifyBtn">✨ Beautify</button>
+            <button id="minifyBtn">🧊 Minify</button>
+            <button id="validateBtn">✅ Validate</button>
+            <button id="sampleBtn">🧪 Sample</button>
+          </div>
+          <div class="right">
+            <button id="copyInBtn">📋 Copy</button>
+            <button id="downloadInBtn">💾 Download</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div class="label">Output</div>
+          <div class="stats" id="outStats"><span class="dot ok"></span>Ready</div>
+        </div>
+        <textarea id="output" spellcheck="false" placeholder="Тут появится результат…" readonly></textarea>
+        <div class="bar">
+          <div class="left">
+            <button id="swapBtn" title="Перекинуть Output → Input">↩️ Output → Input</button>
+            <button class="danger" id="clearOutBtn" title="Очистить Output">🗑️ Clear Output</button>
+          </div>
+          <div class="right">
+            <button id="copyOutBtn">📋 Copy</button>
+            <button id="downloadOutBtn">💾 Download</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      Подсказка: на Android удобно открыть меню браузера и выбрать <b>“Add to Home screen”</b>.
+      Для быстрого форматирования: <code class="kbd">Beautify</code> → <code class="kbd">Copy</code>.
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---------- helpers ----------
+    const $ = (id) => document.getElementById(id);
+    const toastEl = $("toast");
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1600);
+    }
+
+    function safeParseJSON(text){
+      // Trim BOM / whitespace
+      const cleaned = (text || "").replace(/^\uFEFF/, "").trim();
+      if(!cleaned) throw new Error("Empty input");
+      return JSON.parse(cleaned);
+    }
+
+    function formatBytes(n){
+      if(!Number.isFinite(n)) return "—";
+      const units = ["B","KB","MB","GB"];
+      let i=0, v=n;
+      while(v>=1024 && i<units.length-1){ v/=1024; i++; }
+      return (i===0? v.toFixed(0) : v.toFixed(1)) + " " + units[i];
+    }
+
+    function countLines(text){ return (text.match(/\n/g) || []).length + 1; }
+
+    function updateStats(){
+      const t = $("input").value || "";
+      const bytes = new Blob([t]).size;
+      $("inStats").textContent = t.trim()
+        ? `${formatBytes(bytes)} • ${countLines(t)} lines`
+        : "—";
+    }
+
+    function setOutStatus(ok, msg){
+      $("outStats").innerHTML = ok
+        ? `<span class="dot ok"></span>${msg}`
+        : `<span class="dot bad"></span>${msg}`;
+    }
+
+    // ---------- core actions ----------
+    function beautify(){
+      const src = $("input").value;
+      try{
+        const obj = safeParseJSON(src);
+        const out = JSON.stringify(obj, null, 2);
+        $("output").value = out;
+        setOutStatus(true, "Beautified");
+        toast("Beautified ✅");
+      }catch(e){
+        $("output").value = "";
+        setOutStatus(false, e.message || "Invalid JSON");
+        toast("Ошибка JSON ❌");
+      }
+    }
+
+    function minify(){
+      const src = $("input").value;
+      try{
+        const obj = safeParseJSON(src);
+        const out = JSON.stringify(obj);
+        $("output").value = out;
+        setOutStatus(true, "Minified");
+        toast("Minified ✅");
+      }catch(e){
+        $("output").value = "";
+        setOutStatus(false, e.message || "Invalid JSON");
+        toast("Ошибка JSON ❌");
+      }
+    }
+
+    function validate(){
+      const src = $("input").value;
+      try{
+        safeParseJSON(src);
+        setOutStatus(true, "Valid JSON");
+        toast("Valid ✅");
+      }catch(e){
+        setOutStatus(false, e.message || "Invalid JSON");
+        toast("Invalid ❌");
+      }
+    }
+
+    function sample(){
+      const s = {
+        user: { id: 123, name: "Evgeny", tags: ["android","pwa","json"] },
+        settings: { theme: "dark", ads: false },
+        items: [
+          { sku: "A1", qty: 2, price: 9.99 },
+          { sku: "B7", qty: 1, price: 29.5 }
+        ],
+        meta: { created_at: new Date().toISOString() }
+      };
+      $("input").value = JSON.stringify(s, null, 2);
+      updateStats();
+      toast("Sample вставлен");
+    }
+
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        toast("Скопировано 📋");
+      }catch{
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        toast("Скопировано 📋");
+      }
+    }
+
+    function downloadText(filename, text){
+      const blob = new Blob([text], {type:"application/json;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+    }
+
+    // ---------- theme ----------
+    function applyTheme(theme){
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("json_tools_theme", theme);
+    }
+    function toggleTheme(){
+      const cur = localStorage.getItem("json_tools_theme") || "dark";
+      applyTheme(cur === "dark" ? "light" : "dark");
+      toast("Theme: " + (document.documentElement.getAttribute("data-theme")));
+    }
+    applyTheme(localStorage.getItem("json_tools_theme") || "dark");
+
+    // ---------- PWA minimal (manifest via blob + service worker via blob) ----------
+    function setupPWA(){
+      // manifest
+      const manifest = {
+        name: "JSON Tools",
+        short_name: "JSON Tools",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#0b0f1a",
+        theme_color: "#0b0f1a",
+        icons: [
+          // простые "иконки" через data URL SVG, чтобы не нужны были файлы
+          { src: svgIcon(192), sizes: "192x192", type: "image/svg+xml" },
+          { src: svgIcon(512), sizes: "512x512", type: "image/svg+xml" }
+        ]
+      };
+      const manifestBlob = new Blob([JSON.stringify(manifest)], {type:"application/manifest+json"});
+      const manifestUrl = URL.createObjectURL(manifestBlob);
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = manifestUrl;
+      document.head.appendChild(link);
+
+      // service worker (кешируем только саму страницу)
+      if("serviceWorker" in navigator){
+        const swCode = `
+          const CACHE = "json-tools-v1";
+          self.addEventListener("install", (e) => {
+            e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./"])));
+            self.skipWaiting();
+          });
+          self.addEventListener("activate", (e) => {
+            e.waitUntil(self.clients.claim());
+          });
+          self.addEventListener("fetch", (e) => {
+            e.respondWith(
+              caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+                const copy = res.clone();
+                // кешируем только same-origin GET
+                if(e.request.method === "GET" && new URL(e.request.url).origin === location.origin){
+                  caches.open(CACHE).then(c => c.put(e.request, copy));
+                }
+                return res;
+              }).catch(()=>caches.match("./")))
+            );
+          });
+        `;
+        const swBlob = new Blob([swCode], {type:"text/javascript"});
+        const swUrl = URL.createObjectURL(swBlob);
+        navigator.serviceWorker.register(swUrl).catch(()=>{});
+      }
+    }
+
+    function svgIcon(size){
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+          <rect x="8" y="8" width="84" height="84" rx="18" fill="#7aa7ff"/>
+          <text x="50" y="58" text-anchor="middle" font-size="44" font-family="Arial" fill="#fff">{ }</text>
+        </svg>
+      `.trim();
+      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    }
+    setupPWA();
+
+    // ---------- install prompt ----------
+    let deferredPrompt = null;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      $("installBtn").style.display = "inline-flex";
+    });
+    $("installBtn").addEventListener("click", async () => {
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice.catch(()=>{});
+      deferredPrompt = null;
+      $("installBtn").style.display = "none";
+      toast("Ок 👍");
+    });
+
+    // ---------- wire up ----------
+    $("input").addEventListener("input", updateStats);
+
+    $("beautifyBtn").addEventListener("click", beautify);
+    $("minifyBtn").addEventListener("click", minify);
+    $("validateBtn").addEventListener("click", validate);
+    $("sampleBtn").addEventListener("click", sample);
+
+    $("copyInBtn").addEventListener("click", ()=>copyText($("input").value || ""));
+    $("copyOutBtn").addEventListener("click", ()=>copyText($("output").value || ""));
+
+    $("downloadInBtn").addEventListener("click", ()=>{
+      const t = $("input").value || "";
+      if(!t.trim()) return toast("Пусто 🤷");
+      downloadText("input.json", t);
+      toast("Скачано 💾");
+    });
+    $("downloadOutBtn").addEventListener("click", ()=>{
+      const t = $("output").value || "";
+      if(!t.trim()) return toast("Пусто 🤷");
+      downloadText("output.json", t);
+      toast("Скачано 💾");
+    });
+
+    $("swapBtn").addEventListener("click", ()=>{
+      const t = $("output").value || "";
+      if(!t.trim()) return toast("Output пустой 🤷");
+      $("input").value = t;
+      updateStats();
+      toast("Перенесено ↩️");
+    });
+
+    $("clearOutBtn").addEventListener("click", ()=>{
+      $("output").value = "";
+      setOutStatus(true, "Ready");
+      toast("Output очищен");
+    });
+
+    $("clearAllBtn").addEventListener("click", ()=>{
+      $("input").value = "";
+      $("output").value = "";
+      setOutStatus(true, "Ready");
+      updateStats();
+      toast("Очищено 🧹");
+    });
+
+    $("themeBtn").addEventListener("click", toggleTheme);
+
+    // init
+    updateStats();
+  </script>
+</body>
+          </html>
