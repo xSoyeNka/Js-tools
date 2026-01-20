@@ -892,17 +892,21 @@ const payload = {
         toast("OK");
       });
 
-      $("clearAllBtn").addEventListener("click", ()=>{
-        $("input").value = "";
-        $("output").value = "";
-        updateStats();
-        setReadyStatus();
-        $("anyInput").value = "";
-        $("anyOutput").value = "";
-        updateAnyStats();
-        setAnyReady();
-        toast("OK");
-      });
+    $("clearAllBtn").addEventListener("click", ()=>{
+  // JSON Tools
+  $("input").value = "";
+  $("output").value = "";
+  updateStats();
+  setReadyStatus();
+
+  // To JSON
+  $("anyInput").value = "";
+  $("anyOutput").value = "";
+  updateAnyStats();
+  setAnyReady();
+
+  toast("OK");
+});
 
       // page 2
       $("anyInput").addEventListener("input", updateAnyStats);
