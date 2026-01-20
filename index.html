@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b0f1a" />
-  <title>JSON Tools — Beautify / Minify / Validate</title>
+  <title>JSON Tools</title>
   <style>
     :root{
       --bg:#0b0f1a; --card:#111a2e; --text:#e8eefc; --muted:#a8b3d6;
@@ -35,20 +35,47 @@
       padding:10px 12px;
       border-radius:12px;
       cursor:pointer;
-      box-shadow:none;
       font-weight:600;
       font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
     }
     button:hover{ background:var(--btn2); }
     button.primary{ border-color:transparent; background:var(--accent); color:white; }
     button.primary:hover{ filter:brightness(.95); }
     button.danger{ border-color:transparent; background:var(--bad); color:white; }
     button.ghost{ background:transparent; }
+    .tabs{
+      margin-top:14px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .tab{
+      text-decoration:none;
+      color:var(--text);
+      border:1px solid var(--border);
+      background:transparent;
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:700;
+      font-size:13px;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+    }
+    .tab:hover{ background: rgba(127,127,127,.08); }
+    .tab.active{
+      background: var(--btn2);
+      border-color: transparent;
+    }
+
     .grid{
       display:grid;
       grid-template-columns: 1fr;
       gap:14px;
-      margin-top:16px;
+      margin-top:14px;
     }
     @media(min-width:900px){
       .grid{ grid-template-columns: 1fr 1fr; }
@@ -71,11 +98,12 @@
       justify-content:space-between;
       gap:10px;
     }
-    .card-head .label{ font-weight:700; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .card-head .label{ font-weight:800; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
     .stats{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .dot{ width:8px; height:8px; border-radius:999px; display:inline-block; margin-right:6px; }
     .ok{ background:var(--ok); }
     .bad{ background:var(--bad); }
+
     textarea{
       flex:1;
       width:100%;
@@ -119,9 +147,8 @@
       z-index: 9999;
     }
     .toast.show{ opacity:1; }
-    footer{ margin-top:16px; color:var(--muted); font-size:12px; }
-    a{ color:var(--accent); text-decoration:none; }
-    a:hover{ text-decoration:underline; }
+
+    footer{ margin-top:14px; color:var(--muted); font-size:12px; }
     code.kbd{
       font-family:var(--mono);
       font-size: 12px;
@@ -130,86 +157,290 @@
       border-radius: 8px;
       background: rgba(127,127,127,.08);
     }
-  </style>
+    .hidden{ display:none !important; }
 
-  <!-- PWA: минимальные мета/манифест создадим в JS, чтобы был 1 файл -->
+    .onecol{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+      margin-top:14px;
+    }
+    .note{
+      padding:12px 14px;
+      border:1px dashed var(--border);
+      border-radius:14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+      background: rgba(127,127,127,.06);
+    }
+  </style>
 </head>
 
 <body>
   <div class="wrap" id="app">
     <header>
       <div class="title">
-        <h1>JSON Tools</h1>
-        <div class="sub">Beautify • Minify • Validate • Copy • Download • PWA</div>
+        <h1 id="h1">JSON Tools</h1>
+        <div class="sub" id="subtitle">Beautify • Minify • Validate • Copy • Download • PWA</div>
       </div>
       <div class="controls">
-        <button class="ghost" id="themeBtn" title="Сменить тему">🌗 Theme</button>
-        <button class="ghost" id="installBtn" style="display:none" title="Установить как приложение">⬇️ Install</button>
-        <button class="ghost" id="clearAllBtn" title="Очистить всё">🧹 Clear</button>
+        <button class="ghost" id="themeBtn" title="Theme">🌗 <span id="themeTxt">Theme</span></button>
+        <button class="ghost" id="langBtn" title="Language">🌍 <span id="langTxt">RU</span></button>
+        <button class="ghost" id="installBtn" style="display:none" title="Install">⬇️ <span id="installTxt">Install</span></button>
+        <button class="ghost" id="clearAllBtn" title="Clear">🧹 <span id="clearTxt">Clear</span></button>
       </div>
     </header>
 
-    <div class="grid">
-      <section class="card">
-        <div class="card-head">
-          <div class="label">Input JSON</div>
-          <div class="stats" id="inStats">—</div>
-        </div>
-        <textarea id="input" spellcheck="false" placeholder='Вставь JSON сюда…'></textarea>
-        <div class="bar">
-          <div class="left">
-            <button class="primary" id="beautifyBtn">✨ Beautify</button>
-            <button id="minifyBtn">🧊 Minify</button>
-            <button id="validateBtn">✅ Validate</button>
-            <button id="sampleBtn">🧪 Sample</button>
-          </div>
-          <div class="right">
-            <button id="copyInBtn">📋 Copy</button>
-            <button id="downloadInBtn">💾 Download</button>
-          </div>
-        </div>
-      </section>
+    <nav class="tabs" aria-label="Pages">
+      <a class="tab" href="#tools" id="tabTools">🧰 <span data-i="tab_tools">JSON Tools</span></a>
+      <a class="tab" href="#tojson" id="tabToJson">🧪 <span data-i="tab_tojson">To JSON (best effort)</span></a>
+    </nav>
 
-      <section class="card">
-        <div class="card-head">
-          <div class="label">Output</div>
-          <div class="stats" id="outStats"><span class="dot ok"></span>Ready</div>
-        </div>
-        <textarea id="output" spellcheck="false" placeholder="Тут появится результат…" readonly></textarea>
-        <div class="bar">
-          <div class="left">
-            <button id="swapBtn" title="Перекинуть Output → Input">↩️ Output → Input</button>
-            <button class="danger" id="clearOutBtn" title="Очистить Output">🗑️ Clear Output</button>
+    <!-- PAGE 1: JSON Tools -->
+    <section id="pageTools">
+      <div class="grid">
+        <section class="card">
+          <div class="card-head">
+            <div class="label" data-i="label_input">Input JSON</div>
+            <div class="stats" id="inStats">—</div>
           </div>
-          <div class="right">
-            <button id="copyOutBtn">📋 Copy</button>
-            <button id="downloadOutBtn">💾 Download</button>
+          <textarea id="input" spellcheck="false" placeholder=""></textarea>
+          <div class="bar">
+            <div class="left">
+              <button class="primary" id="beautifyBtn">✨ <span data-i="btn_beautify">Beautify</span></button>
+              <button id="minifyBtn">🧊 <span data-i="btn_minify">Minify</span></button>
+              <button id="validateBtn">✅ <span data-i="btn_validate">Validate</span></button>
+              <button id="sampleBtn">🧪 <span data-i="btn_sample">Sample</span></button>
+            </div>
+            <div class="right">
+              <button id="copyInBtn">📋 <span data-i="btn_copy">Copy</span></button>
+              <button id="downloadInBtn">💾 <span data-i="btn_download">Download</span></button>
+            </div>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
 
-    <footer>
-      Подсказка: на Android удобно открыть меню браузера и выбрать <b>“Add to Home screen”</b>.
-      Для быстрого форматирования: <code class="kbd">Beautify</code> → <code class="kbd">Copy</code>.
-    </footer>
+        <section class="card">
+          <div class="card-head">
+            <div class="label" data-i="label_output">Output</div>
+            <div class="stats" id="outStats"><span class="dot ok"></span><span data-i="status_ready">Ready</span></div>
+          </div>
+          <textarea id="output" spellcheck="false" placeholder="" readonly></textarea>
+          <div class="bar">
+            <div class="left">
+              <button id="swapBtn" title="Swap">↩️ <span data-i="btn_out_to_in">Output → Input</span></button>
+              <button class="danger" id="clearOutBtn" title="Clear output">🗑️ <span data-i="btn_clear_output">Clear Output</span></button>
+            </div>
+            <div class="right">
+              <button id="copyOutBtn">📋 <span data-i="btn_copy">Copy</span></button>
+              <button id="downloadOutBtn">💾 <span data-i="btn_download">Download</span></button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer id="footerTools">
+        <span data-i="hint_1">Tip: on Android you can use browser menu → “Add to Home screen”.</span>
+        <span> </span>
+        <span data-i="hint_2">Fast flow:</span>
+        <code class="kbd">Beautify</code> → <code class="kbd">Copy</code>.
+      </footer>
+    </section>
+
+    <!-- PAGE 2: To JSON (best effort) -->
+    <section id="pageToJson" class="hidden">
+      <div class="onecol">
+        <div class="note">
+          <b data-i="tojson_note_title">What is this?</b><br/>
+          <span data-i="tojson_note_body">
+            Paste almost any “code-ish” text (JS-like objects, single quotes, unquoted keys, trailing commas).
+            The tool will try to extract a JSON-ish fragment and convert it to valid JSON for readability.
+            If it fails, you’ll still see the attempted JSON and the parser error.
+          </span>
+        </div>
+
+        <section class="card" style="min-height: 520px;">
+          <div class="card-head">
+            <div class="label" data-i="label_any_input">Any input</div>
+            <div class="stats" id="anyStats">—</div>
+          </div>
+          <textarea id="anyInput" spellcheck="false" placeholder=""></textarea>
+          <div class="bar">
+            <div class="left">
+              <button class="primary" id="convertBtn">🪄 <span data-i="btn_convert">Convert to JSON</span></button>
+              <button id="extractBtn">🧲 <span data-i="btn_extract">Extract JSON-ish</span></button>
+              <button id="anySampleBtn">🧪 <span data-i="btn_sample">Sample</span></button>
+            </div>
+            <div class="right">
+              <button id="copyAnyBtn">📋 <span data-i="btn_copy">Copy</span></button>
+              <button id="downloadAnyBtn">💾 <span data-i="btn_download">Download</span></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" style="min-height: 520px;">
+          <div class="card-head">
+            <div class="label" data-i="label_attempted">Attempted JSON / Result</div>
+            <div class="stats" id="anyOutStats"><span class="dot ok"></span><span data-i="status_ready">Ready</span></div>
+          </div>
+          <textarea id="anyOutput" spellcheck="false" placeholder="" readonly></textarea>
+          <div class="bar">
+            <div class="left">
+              <button id="useAsJsonToolsBtn">↩️ <span data-i="btn_send_to_tools">Send to JSON Tools</span></button>
+              <button class="danger" id="clearAnyOutBtn">🗑️ <span data-i="btn_clear_output">Clear Output</span></button>
+            </div>
+            <div class="right">
+              <button id="copyAnyOutBtn">📋 <span data-i="btn_copy">Copy</span></button>
+              <button id="downloadAnyOutBtn">💾 <span data-i="btn_download">Download</span></button>
+            </div>
+          </div>
+        </section>
+
+        <footer id="footerToJson">
+          <span data-i="tojson_footer">
+            Pro tip: if conversion succeeded, hit “Send to JSON Tools” → then Beautify/Minify/Validate as usual.
+          </span>
+        </footer>
+      </div>
+    </section>
   </div>
 
   <div class="toast" id="toast"></div>
 
   <script>
-    // ---------- helpers ----------
+    // ---------- tiny i18n ----------
+    const I18N = {
+      ru: {
+        title: "JSON Tools",
+        subtitle: "Beautify • Minify • Validate • Copy • Download • PWA",
+        theme: "Тема",
+        install: "Установить",
+        clear: "Очистить",
+        tab_tools: "JSON Tools",
+        tab_tojson: "В JSON (best effort)",
+        label_input: "Ввод JSON",
+        label_output: "Результат",
+        label_any_input: "Любой ввод",
+        label_attempted: "Попытка JSON / Результат",
+        btn_beautify: "Форматировать",
+        btn_minify: "Сжать",
+        btn_validate: "Проверить",
+        btn_sample: "Пример",
+        btn_copy: "Копировать",
+        btn_download: "Скачать",
+        btn_out_to_in: "Результат → Ввод",
+        btn_clear_output: "Очистить результат",
+        status_ready: "Готово",
+        status_beautified: "Отформатировано",
+        status_minified: "Сжато",
+        status_valid: "JSON валиден",
+        status_invalid: "Ошибка JSON",
+        placeholder_input: "Вставь JSON сюда…",
+        placeholder_output: "Тут появится результат…",
+        hint_1: "Подсказка: на Android можно открыть меню браузера → “Добавить на главный экран”.",
+        hint_2: "Быстрый сценарий:",
+        tojson_note_title: "Что это?",
+        tojson_note_body: "Вставь почти любой “кодоподобный” текст (JS-подобные объекты, одинарные кавычки, ключи без кавычек, лишние запятые). Инструмент попробует вытащить JSON-похожий фрагмент и превратить в валидный JSON для наглядности. Если не вышло — ты всё равно увидишь попытку и ошибку парсера.",
+        btn_convert: "Преобразовать в JSON",
+        btn_extract: "Вытащить JSON-похожее",
+        btn_send_to_tools: "Отправить в JSON Tools",
+        tojson_footer: "Совет: если конвертация удалась, нажми “Отправить в JSON Tools” и дальше пользуйся Beautify/Minify/Validate."
+      },
+      en: {
+        title: "JSON Tools",
+        subtitle: "Beautify • Minify • Validate • Copy • Download • PWA",
+        theme: "Theme",
+        install: "Install",
+        clear: "Clear",
+        tab_tools: "JSON Tools",
+        tab_tojson: "To JSON (best effort)",
+        label_input: "Input JSON",
+        label_output: "Output",
+        label_any_input: "Any input",
+        label_attempted: "Attempted JSON / Result",
+        btn_beautify: "Beautify",
+        btn_minify: "Minify",
+        btn_validate: "Validate",
+        btn_sample: "Sample",
+        btn_copy: "Copy",
+        btn_download: "Download",
+        btn_out_to_in: "Output → Input",
+        btn_clear_output: "Clear Output",
+        status_ready: "Ready",
+        status_beautified: "Beautified",
+        status_minified: "Minified",
+        status_valid: "Valid JSON",
+        status_invalid: "Invalid JSON",
+        placeholder_input: "Paste JSON here…",
+        placeholder_output: "Result will appear here…",
+        hint_1: "Tip: on Android you can use browser menu → “Add to Home screen”.",
+        hint_2: "Fast flow:",
+        tojson_note_title: "What is this?",
+        tojson_note_body: "Paste almost any “code-ish” text (JS-like objects, single quotes, unquoted keys, trailing commas). The tool will try to extract a JSON-ish fragment and convert it to valid JSON for readability. If it fails, you’ll still see the attempted JSON and the parser error.",
+        btn_convert: "Convert to JSON",
+        btn_extract: "Extract JSON-ish",
+        btn_send_to_tools: "Send to JSON Tools",
+        tojson_footer: "Pro tip: if conversion succeeded, hit “Send to JSON Tools” → then Beautify/Minify/Validate as usual."
+      }
+    };
+
     const $ = (id) => document.getElementById(id);
     const toastEl = $("toast");
+
     function toast(msg){
       toastEl.textContent = msg;
       toastEl.classList.add("show");
       clearTimeout(toastEl._t);
-      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1600);
+      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1500);
     }
 
+    function setLang(lang){
+      localStorage.setItem("json_tools_lang", lang);
+      const t = I18N[lang] || I18N.en;
+
+      $("h1").textContent = t.title;
+      $("subtitle").textContent = t.subtitle;
+
+      $("themeTxt").textContent = t.theme;
+      $("installTxt").textContent = t.install;
+      $("clearTxt").textContent = t.clear;
+
+      $("langTxt").textContent = (lang === "ru" ? "RU" : "EN");
+
+      document.querySelectorAll("[data-i]").forEach(el=>{
+        const key = el.getAttribute("data-i");
+        if(t[key]) el.textContent = t[key];
+      });
+
+      $("input").placeholder = t.placeholder_input;
+      $("output").placeholder = t.placeholder_output;
+      $("anyInput").placeholder = (lang === "ru")
+        ? "Вставь сюда любой текст/код… например: const data = {a:1, b:'x',};"
+        : "Paste any text/code here… e.g. const data = {a:1, b:'x',};";
+      $("anyOutput").placeholder = (lang === "ru")
+        ? "Тут появится попытка JSON и/или результат…"
+        : "Attempted JSON and/or result will appear here…";
+
+      document.title = t.title;
+
+      // refresh statuses
+      if($("outStats").dataset.state === "ready") setOutStatus(true, t.status_ready);
+      if($("anyOutStats").dataset.state === "ready") setAnyOutStatus(true, t.status_ready);
+    }
+
+    // ---------- theme ----------
+    function applyTheme(theme){
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("json_tools_theme", theme);
+    }
+    function toggleTheme(){
+      const cur = localStorage.getItem("json_tools_theme") || "dark";
+      applyTheme(cur === "dark" ? "light" : "dark");
+      toast("OK");
+    }
+
+    // ---------- JSON tools page ----------
     function safeParseJSON(text){
-      // Trim BOM / whitespace
       const cleaned = (text || "").replace(/^\uFEFF/, "").trim();
       if(!cleaned) throw new Error("Empty input");
       return JSON.parse(cleaned);
@@ -222,7 +453,6 @@
       while(v>=1024 && i<units.length-1){ v/=1024; i++; }
       return (i===0? v.toFixed(0) : v.toFixed(1)) + " " + units[i];
     }
-
     function countLines(text){ return (text.match(/\n/g) || []).length + 1; }
 
     function updateStats(){
@@ -234,53 +464,76 @@
     }
 
     function setOutStatus(ok, msg){
-      $("outStats").innerHTML = ok
+      $("outStats").dataset.state = ok ? "ok" : "bad";
+      $("outStats").innerHTML = OK
         ? `<span class="dot ok"></span>${msg}`
         : `<span class="dot bad"></span>${msg}`;
     }
-
-    // ---------- core actions ----------
-    function beautify(){
-      const src = $("input").value;
-      try{
-        const obj = safeParseJSON(src);
-        const out = JSON.stringify(obj, null, 2);
-        $("output").value = out;
-        setOutStatus(true, "Beautified");
-        toast("Beautified ✅");
-      }catch(e){
-        $("output").value = "";
-        setOutStatus(false, e.message || "Invalid JSON");
-        toast("Ошибка JSON ❌");
-      }
+    function setReadyStatus(){
+      const lang = localStorage.getItem("json_tools_lang") || "ru";
+      const t = I18N[lang] || I18N.en;
+      $("outStats").dataset.state = "ready";
+      setOutStatus(true, t.status_ready);
     }
+  function beautify(){
+  const src = $("input").value;
+  const lang = localStorage.getItem("json_tools_lang") || "ru";
+  const t = I18N[lang] || I18N.en;
+  try{
+    const obj = safeParseJSON(src);
+    const out = JSON.stringify(obj, null, 2);
+    $("output").value = out;
+    setOutStatus(true, t.status_beautified);
+    toast("✅");
+  }catch(e){
+    const msg = (e && e.message) ? e.message : String(e);
+    $("output").value =
+      (lang === "ru" ? "Ошибка JSON:\n" : "JSON error:\n") + msg +
+      "\n\n" + (lang === "ru" ? "Ввод:\n" : "Input:\n") + (src || "");
+    setOutStatus(false, t.status_invalid);
+    toast("❌");
+  }
+}
 
-    function minify(){
-      const src = $("input").value;
-      try{
-        const obj = safeParseJSON(src);
-        const out = JSON.stringify(obj);
-        $("output").value = out;
-        setOutStatus(true, "Minified");
-        toast("Minified ✅");
-      }catch(e){
-        $("output").value = "";
-        setOutStatus(false, e.message || "Invalid JSON");
-        toast("Ошибка JSON ❌");
-      }
-    }
+function minify(){
+  const src = $("input").value;
+  const lang = localStorage.getItem("json_tools_lang") || "ru";
+  const t = I18N[lang] || I18N.en;
+  try{
+    const obj = safeParseJSON(src);
+    const out = JSON.stringify(obj);
+    $("output").value = out;
+    setOutStatus(true, t.status_minified);
+    toast("✅");
+  }catch(e){
+    const msg = (e && e.message) ? e.message : String(e);
+    $("output").value =
+      (lang === "ru" ? "Ошибка JSON:\n" : "JSON error:\n") + msg + 
+      "\n\n" + (lang === "ru" ? "Ввод:\n" : "Input:\n") + (src || "");
+    setOutStatus(false, t.status_invalid);
+    toast("❌");
+  }
+}
 
-    function validate(){
-      const src = $("input").value;
-      try{
-        safeParseJSON(src);
-        setOutStatus(true, "Valid JSON");
-        toast("Valid ✅");
-      }catch(e){
-        setOutStatus(false, e.message || "Invalid JSON");
-        toast("Invalid ❌");
-      }
-    }
+function validate(){
+  const src = $("input").value;
+  const lang = localStorage.getItem("json_tools_lang") || "ru";
+  const t = I18N[lang] || I18N.en;
+  try{
+    safeParseJSON(src);
+    $("output").value = (lang === "ru")
+      ? "✅ JSON валиден"
+      : "✅ JSON is valid";
+    setOutStatus(true, t.status_valid);
+    toast("✅");
+  }catch(e){
+    const msg = (e && e.message) ? e.message : String(e);
+    $("output").value =
+      (lang === "ru" ? "❌ Ошибка JSON:\n" : "❌ JSON error:\n") + msg;
+    setOutStatus(false, t.status_invalid);
+    toast("❌");
+  }
+}
 
     function sample(){
       const s = {
@@ -294,51 +547,238 @@
       };
       $("input").value = JSON.stringify(s, null, 2);
       updateStats();
-      toast("Sample вставлен");
+      toast("OK");
     }
 
     async function copyText(text){
       try{
         await navigator.clipboard.writeText(text);
-        toast("Скопировано 📋");
+        toast("📋");
       }catch{
-        // fallback
         const ta = document.createElement("textarea");
         ta.value = text;
         document.body.appendChild(ta);
         ta.select();
         document.execCommand("copy");
         ta.remove();
-        toast("Скопировано 📋");
+        toast("📋");
       }
     }
 
-    function downloadText(filename, text){
-      const blob = new Blob([text], {type:"application/json;charset=utf-8"});
+    function downloadText(filename, text, mime="application/json;charset=utf-8"){
+      const blob = new Blob([text], {type:mime});
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+      setTimeout(()=>URL.revokeObjectURL(a.href), 600);
     }
 
-    // ---------- theme ----------
-    function applyTheme(theme){
-      document.documentElement.setAttribute("data-theme", theme);
-      localStorage.setItem("json_tools_theme", theme);
+    // ---------- Page 2: best-effort to JSON ----------
+    function updateAnyStats(){
+      const t = $("anyInput").value || "";
+      const bytes = new Blob([t]).size;
+      $("anyStats").textContent = t.trim()
+        ? `${formatBytes(bytes)} • ${countLines(t)} lines`
+        : "—";
     }
-    function toggleTheme(){
-      const cur = localStorage.getItem("json_tools_theme") || "dark";
-      applyTheme(cur === "dark" ? "light" : "dark");
-      toast("Theme: " + (document.documentElement.getAttribute("data-theme")));
-    }
-    applyTheme(localStorage.getItem("json_tools_theme") || "dark");
 
-    // ---------- PWA minimal (manifest via blob + service worker via blob) ----------
+    function setAnyOutStatus(ok, msg){
+      $("anyOutStats").dataset.state = ok ? "ok" : "bad";
+      $("anyOutStats").innerHTML = ok
+        ? `<span class="dot ok"></span>${msg}`
+        : `<span class="dot bad"></span>${msg}`;
+    }
+    function setAnyReady(){
+      const lang = localStorage.getItem("json_tools_lang") || "ru";
+      const t = I18N[lang] || I18N.en;
+      $("anyOutStats").dataset.state = "ready";
+      setAnyOutStatus(true, t.status_ready);
+    }
+
+    function extractJsonish(text){
+      // Strategy:
+      // - find first '{' or '['
+      // - then scan forward for matching closing brace/bracket
+      const s = (text || "");
+      const startCurly = s.indexOf("{");
+      const startBrack = s.indexOf("[");
+      let start = -1;
+      if(startCurly === -1) start = startBrack;
+      else if(startBrack === -1) start = startCurly;
+      else start = Math.min(startCurly, startBrack);
+      if(start < 0) return "";
+
+      const open = s[start];
+      const close = open === "{" ? "}" : "]";
+      let depth = 0;
+      let inStr = false;
+      let strQ = "";
+      let esc = false;
+
+      for(let i=start; i<s.length; i++){
+        const ch = s[i];
+
+        if(inStr){
+          if(esc){ esc = false; continue; }
+          if(ch === "\\"){ esc = true; continue; }
+          if(ch === strQ){ inStr = false; strQ = ""; }
+          continue;
+        } else {
+          if(ch === '"' || ch === "'"){ inStr = true; strQ = ch; continue; }
+          if(ch === open) depth++;
+          if(ch === close){
+            depth--;
+            if(depth === 0){
+              return s.slice(start, i+1);
+            }
+          }
+        }
+      }
+      // fallback: return from start to end
+      return s.slice(start);
+    }
+
+    function softJsonify(input){
+      // Best-effort "JS-ish -> JSON" conversion (heuristics):
+      // 1) extract JSON-ish fragment
+      // 2) remove comments
+      // 3) convert single-quoted strings to double-quoted (simple, not perfect)
+      // 4) quote unquoted keys
+      // 5) remove trailing commas
+      // 6) normalize weird tokens: undefined/NaN/Infinity -> null
+      // 7) try parse JSON
+      const extracted = extractJsonish(input) || input || "";
+      let s = extracted.trim();
+
+      // Remove JS comments (basic)
+      s = s.replace(/\/\*[\s\S]*?\*\//g, "");
+      s = s.replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+            // Replace backticks with quotes (rough)
+      s = s.replace(/`([^`\\]*(\\.[^`\\]*)*)`/g, (_, body) => `"${body.replace(/"/g, '\\"')}"`);
+
+      // Convert single quotes to double quotes for strings (rough, avoids \')
+      s = s.replace(/'([^'\\]*(\\.[^'\\]*)*)'/g, (_, body) => `"${body.replace(/"/g, '\\"')}"`);
+
+      // Quote unquoted object keys: { foo: 1, bar_baz: 2 }
+      // Also supports keys after comma: , foo:
+      s = s.replace(/([{,]\s*)([A-Za-z_$][\w$-]*)(\s*:)/g, '$1"$2"$3');
+
+      // Replace = with : in obvious object-like contexts (rare)
+      s = s.replace(/([{,]\s*"(?:[^"\\]|\\.)+"\s*)=/g, "$1:");
+
+      // Remove trailing commas: { "a": 1, } or [1,2,]
+      s = s.replace(/,\s*([}\]])/g, "$1");
+
+      // Replace undefined/NaN/Infinity with null
+      s = s.replace(/\bundefined\b/g, "null");
+      s = s.replace(/\bNaN\b/g, "null");
+      s = s.replace(/\bInfinity\b/g, "null");
+      s = s.replace(/\b-Infinity\b/g, "null");
+
+      return { extracted, attempted: s };
+    }
+
+    function convertToJson(){
+      const lang = localStorage.getItem("json_tools_lang") || "ru";
+      const t = I18N[lang] || I18N.en;
+
+      const raw = $("anyInput").value || "";
+      if(!raw.trim()){
+        $("anyOutput").value = "";
+        setAnyOutStatus(false, lang === "ru" ? "Пустой ввод" : "Empty input");
+        toast("🤷");
+        return;
+      }
+
+      const { extracted, attempted } = softJsonify(raw);
+
+      // Try parse
+      try{
+        const obj = JSON.parse(attempted);
+        const pretty = JSON.stringify(obj, null, 2);
+        $("anyOutput").value = pretty;
+        setAnyOutStatus(true, lang === "ru" ? "Успешно преобразовано" : "Converted");
+        toast("✅");
+      }catch(e){
+        // Show attempted + error for visibility
+        $("anyOutput").value =
+          (lang === "ru"
+            ? "=== Попытка JSON ===\n"
+            : "=== Attempted JSON ===\n")
+          + attempted
+          + "\n\n"
+          + (lang === "ru"
+            ? "=== Ошибка парсинга ===\n"
+            : "=== Parse error ===\n")
+          + (e && e.message ? e.message : String(e))
+          + "\n\n"
+          + (lang === "ru"
+            ? "=== Извлечённый фрагмент (до правок) ===\n"
+            : "=== Extracted fragment (before fixes) ===\n")
+          + extracted;
+
+        setAnyOutStatus(false, lang === "ru" ? "Не удалось распарсить" : "Failed to parse");
+        toast("❌");
+      }
+    }
+
+    function extractOnly(){
+      const lang = localStorage.getItem("json_tools_lang") || "ru";
+      const raw = $("anyInput").value || "";
+      const frag = extractJsonish(raw);
+      if(!frag){
+        $("anyOutput").value = "";
+        setAnyOutStatus(false, lang === "ru" ? "Нечего извлечь" : "Nothing to extract");
+        toast("🤷");
+        return;
+      }
+      $("anyOutput").value = frag;
+      setAnyOutStatus(true, lang === "ru" ? "Фрагмент извлечён" : "Extracted");
+      toast("🧲");
+    }
+
+    function anySample(){
+      const lang = localStorage.getItem("json_tools_lang") || "ru";
+      $("anyInput").value =
+        (lang === "ru")
+        ? `// JS-подобный объект + одинарные кавычки + лишняя запятая
+const payload = {
+  user: {id: 42, name: 'Evgeny',},
+  enabled: true,
+  tags: ['android','pwa',],
+  meta: {createdAt: "2026-01-20T12:34:56Z"},
+};
+// а вот ещё кусок:
+[{a:1, b:'x',}, {c:2}]`
+        : `// JS-ish object + single quotes + trailing commas
+const payload = {
+  user: {id: 42, name: 'Evgeny',},
+  enabled: true,
+  tags: ['android','pwa',],
+  meta: {createdAt: "2026-01-20T12:34:56Z"},
+};
+// another fragment:
+[{a:1, b:'x',}, {c:2}]`;
+      updateAnyStats();
+      toast("OK");
+    }
+
+    // ---------- PWA minimal (manifest + SW via blob) ----------
+    function svgIcon(size){
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+          <rect x="8" y="8" width="84" height="84" rx="18" fill="#7aa7ff"/>
+          <text x="50" y="58" text-anchor="middle" font-size="44" font-family="Arial" fill="#fff">{ }</text>
+        </svg>
+      `.trim();
+      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    }
+
     function setupPWA(){
-      // manifest
       const manifest = {
         name: "JSON Tools",
         short_name: "JSON Tools",
@@ -347,7 +787,6 @@
         background_color: "#0b0f1a",
         theme_color: "#0b0f1a",
         icons: [
-          // простые "иконки" через data URL SVG, чтобы не нужны были файлы
           { src: svgIcon(192), sizes: "192x192", type: "image/svg+xml" },
           { src: svgIcon(512), sizes: "512x512", type: "image/svg+xml" }
         ]
@@ -359,22 +798,18 @@
       link.href = manifestUrl;
       document.head.appendChild(link);
 
-      // service worker (кешируем только саму страницу)
       if("serviceWorker" in navigator){
         const swCode = `
-          const CACHE = "json-tools-v1";
+          const CACHE = "json-tools-v2";
           self.addEventListener("install", (e) => {
             e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./"])));
             self.skipWaiting();
           });
-          self.addEventListener("activate", (e) => {
-            e.waitUntil(self.clients.claim());
-          });
+          self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
           self.addEventListener("fetch", (e) => {
             e.respondWith(
               caches.match(e.request).then(r => r || fetch(e.request).then(res => {
                 const copy = res.clone();
-                // кешируем только same-origin GET
                 if(e.request.method === "GET" && new URL(e.request.url).origin === location.origin){
                   caches.open(CACHE).then(c => c.put(e.request, copy));
                 }
@@ -389,17 +824,6 @@
       }
     }
 
-    function svgIcon(size){
-      const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
-          <rect x="8" y="8" width="84" height="84" rx="18" fill="#7aa7ff"/>
-          <text x="50" y="58" text-anchor="middle" font-size="44" font-family="Arial" fill="#fff">{ }</text>
-        </svg>
-      `.trim();
-      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-    }
-    setupPWA();
-
     // ---------- install prompt ----------
     let deferredPrompt = null;
     window.addEventListener("beforeinstallprompt", (e) => {
@@ -407,65 +831,138 @@
       deferredPrompt = e;
       $("installBtn").style.display = "inline-flex";
     });
-    $("installBtn").addEventListener("click", async () => {
-      if(!deferredPrompt) return;
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice.catch(()=>{});
-      deferredPrompt = null;
-      $("installBtn").style.display = "none";
-      toast("Ок 👍");
-    });
+
+    // ---------- routing (2 pages) ----------
+    function setPage(hash){
+      const h = (hash || location.hash || "#tools").toLowerCase();
+      const tools = (h === "#tools" || h === "" || h === "#");
+      $("pageTools").classList.toggle("hidden", !tools);
+      $("pageToJson").classList.toggle("hidden", tools);
+
+      $("tabTools").classList.toggle("active", tools);
+      $("tabToJson").classList.toggle("active", !tools);
+    }
 
     // ---------- wire up ----------
-    $("input").addEventListener("input", updateStats);
+    (function init(){
+      // defaults
+      applyTheme(localStorage.getItem("json_tools_theme") || "dark");
+      setLang(localStorage.getItem("json_tools_lang") || "ru");
+      setupPWA();
 
-    $("beautifyBtn").addEventListener("click", beautify);
-    $("minifyBtn").addEventListener("click", minify);
-    $("validateBtn").addEventListener("click", validate);
-    $("sampleBtn").addEventListener("click", sample);
+      // routing
+      setPage(location.hash);
+      window.addEventListener("hashchange", () => setPage(location.hash));
 
-    $("copyInBtn").addEventListener("click", ()=>copyText($("input").value || ""));
-    $("copyOutBtn").addEventListener("click", ()=>copyText($("output").value || ""));
+      // JSON tools
+      $("input").addEventListener("input", updateStats);
+      $("beautifyBtn").addEventListener("click", beautify);
+      $("minifyBtn").addEventListener("click", minify);
+      $("validateBtn").addEventListener("click", validate);
+      $("sampleBtn").addEventListener("click", sample);
 
-    $("downloadInBtn").addEventListener("click", ()=>{
-      const t = $("input").value || "";
-      if(!t.trim()) return toast("Пусто 🤷");
-      downloadText("input.json", t);
-      toast("Скачано 💾");
-    });
-    $("downloadOutBtn").addEventListener("click", ()=>{
-      const t = $("output").value || "";
-      if(!t.trim()) return toast("Пусто 🤷");
-      downloadText("output.json", t);
-      toast("Скачано 💾");
-    });
+      $("copyInBtn").addEventListener("click", ()=>copyText($("input").value || ""));
+      $("copyOutBtn").addEventListener("click", ()=>copyText($("output").value || ""));
 
-    $("swapBtn").addEventListener("click", ()=>{
-      const t = $("output").value || "";
-      if(!t.trim()) return toast("Output пустой 🤷");
-      $("input").value = t;
+      $("downloadInBtn").addEventListener("click", ()=>{
+        const t = $("input").value || "";
+        if(!t.trim()) return toast("🤷");
+        downloadText("input.json", t);
+        toast("💾");
+      });
+      $("downloadOutBtn").addEventListener("click", ()=>{
+        const t = $("output").value || "";
+        if(!t.trim()) return toast("🤷");
+        downloadText("output.json", t);
+        toast("💾");
+      });
+
+      $("swapBtn").addEventListener("click", ()=>{
+        const t = $("output").value || "";
+        if(!t.trim()) return toast("🤷");
+        $("input").value = t;
+        updateStats();
+        toast("↩️");
+      });
+
+      $("clearOutBtn").addEventListener("click", ()=>{
+        $("output").value = "";
+        setReadyStatus();
+        toast("OK");
+      });
+
+      $("clearAllBtn").addEventListener("click", ()=>{
+        $("input").value = "";
+        $("output").value = "";
+        updateStats();
+        setReadyStatus();
+        $("anyInput").value = "";
+        $("anyOutput").value = "";
+        updateAnyStats();
+        setAnyReady();
+        toast("OK");
+      });
+
+      // page 2
+      $("anyInput").addEventListener("input", updateAnyStats);
+      $("convertBtn").addEventListener("click", convertToJson);
+      $("extractBtn").addEventListener("click", extractOnly);
+      $("anySampleBtn").addEventListener("click", anySample);
+
+      $("copyAnyBtn").addEventListener("click", ()=>copyText($("anyInput").value || ""));
+      $("downloadAnyBtn").addEventListener("click", ()=>{
+        const t = $("anyInput").value || "";
+        if(!t.trim()) return toast("🤷");
+        downloadText("input.txt", t, "text/plain;charset=utf-8");
+        toast("💾");
+      });
+
+      $("copyAnyOutBtn").addEventListener("click", ()=>copyText($("anyOutput").value || ""));
+      $("downloadAnyOutBtn").addEventListener("click", ()=>{
+        const t = $("anyOutput").value || "";
+        if(!t.trim()) return toast("🤷");
+        downloadText("result.json", t, "application/json;charset=utf-8");
+        toast("💾");
+      });
+
+      $("useAsJsonToolsBtn").addEventListener("click", ()=>{
+        const t = $("anyOutput").value || "";
+        if(!t.trim()) return toast("🤷");
+        $("input").value = t;
+        updateStats();
+        location.hash = "#tools";
+        toast("↩️");
+      });
+
+      $("clearAnyOutBtn").addEventListener("click", ()=>{
+        $("anyOutput").value = "";
+        setAnyReady();
+        toast("OK");
+      });
+
+      // top controls
+      $("themeBtn").addEventListener("click", toggleTheme);
+      $("langBtn").addEventListener("click", ()=>{
+        const cur = localStorage.getItem("json_tools_lang") || "ru";
+        setLang(cur === "ru" ? "en" : "ru");
+        toast("OK");
+      });
+
+      $("installBtn").addEventListener("click", async () => {
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice.catch(()=>{});
+        deferredPrompt = null;
+        $("installBtn").style.display = "none";
+        toast("OK");
+      });
+
+      // initial status
       updateStats();
-      toast("Перенесено ↩️");
-    });
-
-    $("clearOutBtn").addEventListener("click", ()=>{
-      $("output").value = "";
-      setOutStatus(true, "Ready");
-      toast("Output очищен");
-    });
-
-    $("clearAllBtn").addEventListener("click", ()=>{
-      $("input").value = "";
-      $("output").value = "";
-      setOutStatus(true, "Ready");
-      updateStats();
-      toast("Очищено 🧹");
-    });
-
-    $("themeBtn").addEventListener("click", toggleTheme);
-
-    // init
-    updateStats();
+      updateAnyStats();
+      setReadyStatus();
+      setAnyReady();
+    })();
   </script>
 </body>
-          </html>
+</html>
